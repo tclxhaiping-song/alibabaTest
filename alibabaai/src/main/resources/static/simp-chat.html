@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simp Chat Studio</title>
+    <style>
+        :root {
+            --bg-1: #0f1226;
+            --bg-2: #1a1f3b;
+            --card: rgba(20, 25, 50, 0.62);
+            --line: rgba(132, 176, 255, 0.35);
+            --text: #e9efff;
+            --sub: #9fb2e9;
+            --accent: #6ef2ff;
+            --accent-2: #7d8bff;
+            --ok: #52f0a4;
+            --warn: #ffd166;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 20% 10%, rgba(110, 242, 255, 0.18), transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(125, 139, 255, 0.22), transparent 45%),
+                linear-gradient(140deg, var(--bg-1), var(--bg-2));
+            padding: 24px;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.3fr 0.9fr;
+            gap: 18px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 18px;
+        }
+
+        .hero {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .title {
+            margin: 0;
+            font-size: 28px;
+            letter-spacing: 0.5px;
+        }
+
+        .subtitle {
+            margin: 6px 0 0;
+            color: var(--sub);
+            font-size: 14px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            border: 0;
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #0c1028;
+            background: linear-gradient(120deg, var(--accent), var(--accent-2));
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.2s ease;
+            box-shadow: 0 6px 16px rgba(110, 242, 255, 0.35);
+        }
+
+        button:hover { transform: translateY(-1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--line);
+            box-shadow: none;
+        }
+
+        textarea, input[type="text"], input[type="number"] {
+            width: 100%;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: rgba(9, 12, 28, 0.65);
+            color: var(--text);
+            padding: 10px 12px;
+            outline: none;
+        }
+
+        textarea { min-height: 90px; resize: vertical; }
+
+        .label {
+            font-size: 13px;
+            color: var(--sub);
+            margin: 10px 0 8px;
+            display: block;
+        }
+
+        .output {
+            min-height: 220px;
+            white-space: pre-wrap;
+            line-height: 1.65;
+            font-size: 15px;
+            color: #f6f9ff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: rgba(5, 8, 24, 0.7);
+            padding: 14px;
+        }
+
+        .cursor::after {
+            content: "▋";
+            margin-left: 2px;
+            animation: blink 0.8s infinite;
+            color: var(--accent);
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px;
+            background: rgba(10, 14, 30, 0.6);
+        }
+
+        input[type="file"] {
+            width: 100%;
+            color: var(--sub);
+            margin-top: 6px;
+        }
+
+        .status {
+            margin-top: 8px;
+            font-size: 13px;
+            color: var(--ok);
+        }
+
+        .status.warn { color: var(--warn); }
+
+        .tips {
+            margin: 12px 0 0;
+            padding-left: 18px;
+            color: var(--sub);
+            line-height: 1.8;
+            font-size: 13px;
+        }
+
+        @media (max-width: 920px) {
+            .container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <section class="card hero">
+        <div>
+            <h1 class="title">Simp Chat Studio</h1>
+            <p class="subtitle">切换为 `SimpChatController` 的聊天工作台：普通对话、流式输出、图片理解</p>
+        </div>
+        <div class="actions">
+            <button id="simpleBtn">普通对话</button>
+            <button id="streamBtn">流式对话</button>
+            <button id="stopBtn" class="btn-ghost" disabled>停止流式</button>
+            <button id="imageBtn" class="btn-ghost">图片分析</button>
+        </div>
+    </section>
+
+    <section class="card">
+        <label class="label" for="promptInput">你的提问</label>
+        <textarea id="promptInput" placeholder="比如：请用三点介绍下你自己，并举一个 Java 示例。">你好，介绍下你自己吧。</textarea>
+
+        <label class="label">聊天输出</label>
+        <div id="output" class="output"></div>
+        <div id="status" class="status">准备就绪</div>
+
+        <div class="actions" style="margin-top: 12px;">
+            <button id="clearBtn" class="btn-ghost">清空</button>
+        </div>
+    </section>
+
+    <section class="card">
+        <h3 style="margin-top: 0;">图片理解</h3>
+        <div class="panel">
+            <label class="label" for="imagePrompt">图片提示词</label>
+            <input id="imagePrompt" type="text" value="请分析这张图片的内容" />
+
+            <label class="label" for="imageFile">上传图片</label>
+            <input id="imageFile" type="file" accept="image/*" />
+
+            <ul class="tips">
+                <li>普通对话接口：`GET /chat`</li>
+                <li>流式对话接口：`GET /stream/chat`</li>
+                <li>图片分析接口：`POST /image/analyze/upload`</li>
+            </ul>
+        </div>
+    </section>
+
+    <div hidden aria-hidden="true">
+        <span class="cursor"></span>
+        <span class="status warn"></span>
+    </div>
+</div>
+
+<script>
+    const output = document.getElementById('output');
+    const statusText = document.getElementById('status');
+    const promptInput = document.getElementById('promptInput');
+    const imagePromptInput = document.getElementById('imagePrompt');
+    const imageFileInput = document.getElementById('imageFile');
+    const stopBtn = document.getElementById('stopBtn');
+    let currentStream = null;
+
+    function setStatus(text, warn) {
+        statusText.textContent = text;
+        statusText.className = warn ? 'status warn' : 'status';
+    }
+
+    function setOutput(text, typing) {
+        output.textContent = text;
+        output.classList.toggle('cursor', !!typing);
+    }
+
+    function getPrompt() {
+        return (promptInput.value || '').trim();
+    }
+
+    function requirePrompt() {
+        const prompt = getPrompt();
+        if (!prompt) {
+            throw new Error('请输入聊天内容后再发送');
+        }
+        return prompt;
+    }
+
+    function closeStream() {
+        if (currentStream) {
+            currentStream.close();
+            currentStream = null;
+        }
+        stopBtn.disabled = true;
+        output.classList.remove('cursor');
+    }
+
+    async function callSimple() {
+        closeStream();
+        setStatus('正在请求普通对话...');
+        setOutput('', false);
+        const q = encodeURIComponent(requirePrompt());
+        const res = await fetch(`/chat?input=${q}`);
+        if (!res.ok) throw new Error(`请求失败: ${res.status}`);
+        const text = await res.text();
+        setOutput(text, false);
+        setStatus('普通对话完成');
+    }
+
+    function callStream() {
+        closeStream();
+        setStatus('流式输出中...');
+        setOutput('', true);
+        const q = encodeURIComponent(requirePrompt());
+        const stream = new EventSource(`/stream/chat?input=${q}`);
+        currentStream = stream;
+        stopBtn.disabled = false;
+
+        stream.onmessage = (event) => {
+            output.textContent += event.data;
+        };
+
+        stream.onerror = () => {
+            closeStream();
+            setStatus('流式连接已结束', false);
+        };
+    }
+
+    async function callImageAnalyze() {
+        closeStream();
+        const file = imageFileInput.files && imageFileInput.files[0];
+        if (!file) {
+            throw new Error('请先选择一张图片');
+        }
+
+        setStatus('正在分析图片...');
+        setOutput('', false);
+        const formData = new FormData();
+        formData.append('prompt', (imagePromptInput.value || '').trim() || '请分析这张图片的内容');
+        formData.append('file', file);
+
+        const res = await fetch('/image/analyze/upload', {
+            method: 'POST',
+            body: formData
+        });
+        if (!res.ok) throw new Error(`请求失败: ${res.status}`);
+        const text = await res.text();
+        setOutput(text, false);
+        setStatus('图片分析完成');
+    }
+
+    async function run(action) {
+        try {
+            await action();
+        } catch (e) {
+            closeStream();
+            setStatus((e && e.message) ? e.message : '请求失败', true);
+        }
+    }
+
+    document.getElementById('simpleBtn').addEventListener('click', () => run(callSimple));
+    document.getElementById('streamBtn').addEventListener('click', () => run(() => {
+        callStream();
+    }));
+    document.getElementById('imageBtn').addEventListener('click', () => run(callImageAnalyze));
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        closeStream();
+        setOutput('', false);
+        setStatus('已清空');
+    });
+    stopBtn.addEventListener('click', () => {
+        closeStream();
+        setStatus('已手动停止流式输出');
+    });
+</script>
+</body>
+</html>
+
+
