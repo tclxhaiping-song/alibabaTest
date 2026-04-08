@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Simp Chat Studio</title>
+    <title>Simp Stream Studio</title>
     <style>
         :root {
             --bg-1: #0f1226;
@@ -139,19 +139,6 @@
             50% { opacity: 0; }
         }
 
-        .panel {
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 14px;
-            background: rgba(10, 14, 30, 0.6);
-        }
-
-        input[type="file"] {
-            width: 100%;
-            color: var(--sub);
-            margin-top: 6px;
-        }
-
         .status {
             margin-top: 8px;
             font-size: 13px;
@@ -159,14 +146,6 @@
         }
 
         .status.warn { color: var(--warn); }
-
-        .tips {
-            margin: 12px 0 0;
-            padding-left: 18px;
-            color: var(--sub);
-            line-height: 1.8;
-            font-size: 13px;
-        }
 
         @media (max-width: 920px) {
             .container { grid-template-columns: 1fr; }
@@ -177,18 +156,16 @@
 <div class="container">
     <section class="card hero">
         <div>
-            <h1 class="title">Simp Chat Studio</h1>
-            <p class="subtitle">切换为 `SimpChatController` 的聊天工作台：普通对话、流式输出、图片理解</p>
+            <h1 class="title">Simp Stream Studio</h1>
+            <p class="subtitle">一个专注于 `SimpChatController` 流式输出体验的聊天页面</p>
         </div>
         <div class="actions">
-            <button id="simpleBtn">普通对话</button>
             <button id="streamBtn">流式对话</button>
             <button id="stopBtn" class="btn-ghost" disabled>停止流式</button>
-            <button id="imageBtn" class="btn-ghost">图片分析</button>
         </div>
     </section>
 
-    <section class="card">
+    <section class="card" style="grid-column: 1 / -1;">
         <label class="label" for="promptInput">你的提问</label>
         <textarea id="promptInput" placeholder="比如：请用三点介绍下你自己，并举一个 Java 示例。">你好，介绍下你自己吧。</textarea>
 
@@ -198,23 +175,6 @@
 
         <div class="actions" style="margin-top: 12px;">
             <button id="clearBtn" class="btn-ghost">清空</button>
-        </div>
-    </section>
-
-    <section class="card">
-        <h3 style="margin-top: 0;">图片理解</h3>
-        <div class="panel">
-            <label class="label" for="imagePrompt">图片提示词</label>
-            <input id="imagePrompt" type="text" value="请分析这张图片的内容" />
-
-            <label class="label" for="imageFile">上传图片</label>
-            <input id="imageFile" type="file" accept="image/*" />
-
-            <ul class="tips">
-                <li>普通对话接口：`GET /chat`</li>
-                <li>流式对话接口：`GET /stream/chat`</li>
-                <li>图片分析接口：`POST /image/analyze/upload`</li>
-            </ul>
         </div>
     </section>
 
@@ -228,8 +188,6 @@
     const output = document.getElementById('output');
     const statusText = document.getElementById('status');
     const promptInput = document.getElementById('promptInput');
-    const imagePromptInput = document.getElementById('imagePrompt');
-    const imageFileInput = document.getElementById('imageFile');
     const stopBtn = document.getElementById('stopBtn');
     let currentStream = null;
 
@@ -264,18 +222,6 @@
         output.classList.remove('cursor');
     }
 
-    async function callSimple() {
-        closeStream();
-        setStatus('正在请求普通对话...');
-        setOutput('', false);
-        const q = encodeURIComponent(requirePrompt());
-        const res = await fetch(`/chat?input=${q}`);
-        if (!res.ok) throw new Error(`请求失败: ${res.status}`);
-        const text = await res.text();
-        setOutput(text, false);
-        setStatus('普通对话完成');
-    }
-
     function callStream() {
         closeStream();
         setStatus('流式输出中...');
@@ -295,29 +241,6 @@
         };
     }
 
-    async function callImageAnalyze() {
-        closeStream();
-        const file = imageFileInput.files && imageFileInput.files[0];
-        if (!file) {
-            throw new Error('请先选择一张图片');
-        }
-
-        setStatus('正在分析图片...');
-        setOutput('', false);
-        const formData = new FormData();
-        formData.append('prompt', (imagePromptInput.value || '').trim() || '请分析这张图片的内容');
-        formData.append('file', file);
-
-        const res = await fetch('/image/analyze/upload', {
-            method: 'POST',
-            body: formData
-        });
-        if (!res.ok) throw new Error(`请求失败: ${res.status}`);
-        const text = await res.text();
-        setOutput(text, false);
-        setStatus('图片分析完成');
-    }
-
     async function run(action) {
         try {
             await action();
@@ -327,11 +250,9 @@
         }
     }
 
-    document.getElementById('simpleBtn').addEventListener('click', () => run(callSimple));
     document.getElementById('streamBtn').addEventListener('click', () => run(() => {
         callStream();
     }));
-    document.getElementById('imageBtn').addEventListener('click', () => run(callImageAnalyze));
     document.getElementById('clearBtn').addEventListener('click', () => {
         closeStream();
         setOutput('', false);
@@ -344,5 +265,7 @@
 </script>
 </body>
 </html>
+
+
 
 
